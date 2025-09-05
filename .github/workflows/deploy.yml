@@ -1,0 +1,213 @@
+name: Deploy to Google Cloud
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  REGION: us-central1
+  REGISTRY: us-central1-docker.pkg.dev
+  REPOSITORY: affine
+  IMAGE: affine
+
+jobs:
+  # Test job (runs on all pushes and PRs)
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --immutable
+
+      - name: Run linting
+        run: yarn lint
+
+      - name: Run type checking
+        run: yarn typecheck
+
+      - name: Run tests
+        run: yarn test
+
+  # Build and deploy job (only runs on main branch)
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: test
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker to use gcloud as a credential helper
+        run: gcloud auth configure-docker $REGISTRY
+
+      - name: Build Docker image
+        run: |
+          docker build -t $REGISTRY/$PROJECT_ID/$REPOSITORY/$IMAGE:$GITHUB_SHA \
+                       -t $REGISTRY/$PROJECT_ID/$REPOSITORY/$IMAGE:latest .
+
+      - name: Push Docker image
+        run: |
+          docker push $REGISTRY/$PROJECT_ID/$REPOSITORY/$IMAGE:$GITHUB_SHA
+          docker push $REGISTRY/$PROJECT_ID/$REPOSITORY/$IMAGE:latest
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy affine-service \
+            --image=$REGISTRY/$PROJECT_ID/$REPOSITORY/$IMAGE:$GITHUB_SHA \
+            --region=$REGION \
+            --platform=managed \
+            --allow-unauthenticated \
+            --memory=2Gi \
+            --cpu=2 \
+            --concurrency=80 \
+            --max-instances=10 \
+            --min-instances=1 \
+            --timeout=300 \
+            --service-account=affine-service@$PROJECT_ID.iam.gserviceaccount.com \
+            --vpc-connector=affine-connector \
+            --vpc-egress=all-traffic \
+            --set-env-vars="NODE_ENV=production,PORT=3010" \
+            --set-secrets="NEXTAUTH_SECRET=nextauth-secret:latest,AFFINE_JWT_SECRET=jwt-secret:latest"
+
+      - name: Get service URL
+        run: |
+          SERVICE_URL=$(gcloud run services describe affine-service \
+            --region=$REGION \
+            --format='value(status.url)')
+          echo "Service deployed at: $SERVICE_URL"
+          echo "SERVICE_URL=$SERVICE_URL" >> $GITHUB_ENV
+
+      - name: Test deployment
+        run: |
+          # Wait a moment for service to be ready
+          sleep 30
+          
+          # Test health endpoint
+          curl -f "$SERVICE_URL/api/healthcheck" || exit 1
+          echo "Health check passed!"
+
+  # Infrastructure deployment (manual trigger or changes to terraform files)
+  infrastructure:
+    if: github.ref == 'refs/heads/main' && (contains(github.event.head_commit.message, '[infrastructure]') || github.event_name == 'workflow_dispatch')
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.5.7
+
+      - name: Terraform Format
+        id: fmt
+        run: terraform fmt -check
+        working-directory: infrastructure/terraform
+        continue-on-error: true
+
+      - name: Terraform Init
+        id: init
+        run: terraform init
+        working-directory: infrastructure/terraform
+
+      - name: Terraform Validate
+        id: validate
+        run: terraform validate
+        working-directory: infrastructure/terraform
+
+      - name: Terraform Plan
+        id: plan
+        run: terraform plan -var="project_id=$PROJECT_ID"
+        working-directory: infrastructure/terraform
+        continue-on-error: true
+
+      - name: Terraform Plan Status
+        if: steps.plan.outcome == 'failure'
+        run: exit 1
+
+      - name: Terraform Apply
+        if: github.ref == 'refs/heads/main'
+        run: terraform apply -auto-approve -var="project_id=$PROJECT_ID"
+        working-directory: infrastructure/terraform
+
+  # Cleanup old images (runs weekly)
+  cleanup:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Clean up old container images
+        run: |
+          # Keep last 10 images, delete older ones
+          gcloud artifacts docker images list $REGISTRY/$PROJECT_ID/$REPOSITORY/$IMAGE \
+            --include-tags \
+            --format="get(digest)" \
+            --sort-by="~timestamp" \
+            --limit=100 \
+            | tail -n +11 \
+            | while read digest; do
+              if [ ! -z "$digest" ]; then
+                echo "Deleting image with digest: $digest"
+                gcloud artifacts docker images delete "$REGISTRY/$PROJECT_ID/$REPOSITORY/$IMAGE@$digest" --quiet
+              fi
+            done
+
+# Schedule cleanup to run weekly
+on:
+  schedule:
+    - cron: '0 2 * * 0'  # Every Sunday at 2 AM UTC

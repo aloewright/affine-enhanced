@@ -1,0 +1,189 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Unified Meta-Prompt Input Schema",
+  "type": "object",
+  "properties": {
+    "domain": {
+      "type": "string",
+      "enum": [
+        "creative_writing",
+        "technical_documentation", 
+        "customer_service",
+        "ai_agent_instructions",
+        "software_development",
+        "custom"
+      ],
+      "description": "Target domain for prompt generation"
+    },
+    "objective": {
+      "type": "string",
+      "description": "Primary goal the generated prompt should achieve",
+      "minLength": 10
+    },
+    "constraints": {
+      "type": "object",
+      "properties": {
+        "length": {
+          "type": "object",
+          "properties": {
+            "words": {"type": "integer", "minimum": 10},
+            "characters": {"type": "integer", "minimum": 50},
+            "tokens": {"type": "integer", "minimum": 20}
+          }
+        },
+        "safety": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Content safety guidelines"
+        },
+        "format": {
+          "type": "string",
+          "enum": ["json", "markdown", "plain_text", "structured_template"],
+          "description": "Expected output format"
+        },
+        "compliance": {
+          "type": "array", 
+          "items": {"type": "string"},
+          "description": "Regulatory or policy compliance requirements"
+        }
+      }
+    },
+    "user_profile": {
+      "type": "object",
+      "required": ["expertise"],
+      "properties": {
+        "expertise": {
+          "type": "string",
+          "enum": ["beginner", "intermediate", "expert", "mixed"],
+          "description": "User's expertise level in the domain"
+        },
+        "role": {
+          "type": "string",
+          "enum": ["developer", "writer", "manager", "support", "analyst", "other"],
+          "description": "User's professional role"
+        },
+        "context": {
+          "type": "string",
+          "enum": ["individual", "team", "enterprise"],
+          "description": "Usage context"
+        }
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "properties": {
+        "tone": {
+          "type": "string",
+          "enum": ["professional", "friendly", "authoritative", "empathetic", "casual"],
+          "description": "Desired communication tone"
+        },
+        "verbosity": {
+          "type": "string",
+          "enum": ["concise", "detailed", "comprehensive"],
+          "description": "Level of detail"
+        },
+        "examples": {
+          "type": "boolean",
+          "description": "Whether to include examples in generated prompt"
+        },
+        "language": {
+          "type": "string",
+          "default": "en",
+          "description": "Primary language (ISO 639-1 code)"
+        },
+        "citations": {
+          "type": "boolean",
+          "description": "Whether citations/references should be included"
+        }
+      }
+    },
+    "environment": {
+      "type": "object",
+      "properties": {
+        "tools": {
+          "type": "array",
+          "items": {"type": "string"},
+          "description": "Available MCP servers and tools"
+        },
+        "runtime": {
+          "type": "string",
+          "default": "Node.js v24.7.0",
+          "description": "Runtime environment"
+        },
+        "model": {
+          "type": "string", 
+          "default": "claude-sonnet-4",
+          "description": "Preferred AI model"
+        },
+        "token_budget": {
+          "type": "integer",
+          "description": "Maximum tokens for generation"
+        },
+        "latency_target": {
+          "type": "string",
+          "enum": ["real_time", "fast", "standard", "batch"],
+          "description": "Performance requirements"
+        }
+      }
+    },
+    "domain_specific": {
+      "type": "object",
+      "description": "Domain-specific parameters",
+      "oneOf": [
+        {
+          "properties": {
+            "genre": {"type": "string"},
+            "voice": {"type": "string"},
+            "pacing": {"type": "string"},
+            "pov": {"type": "string"}
+          },
+          "title": "Creative Writing"
+        },
+        {
+          "properties": {
+            "audience_level": {"type": "string"},
+            "product_version": {"type": "string"},
+            "api_references": {"type": "boolean"},
+            "code_samples": {"type": "boolean"}
+          },
+          "title": "Technical Documentation"
+        },
+        {
+          "properties": {
+            "brand_voice": {"type": "string"},
+            "escalation_rules": {"type": "boolean"},
+            "pii_handling": {"type": "boolean"},
+            "response_templates": {"type": "boolean"}
+          },
+          "title": "Customer Service"
+        },
+        {
+          "properties": {
+            "tool_schemas": {"type": "boolean"},
+            "error_handling": {"type": "boolean"},
+            "safety_rails": {"type": "boolean"},
+            "mcp_integration": {"type": "boolean"}
+          },
+          "title": "AI Agent Instructions"
+        },
+        {
+          "properties": {
+            "language": {"type": "string"},
+            "framework": {"type": "string"},
+            "coding_standards": {"type": "string"},
+            "testing_required": {"type": "boolean"},
+            "security_constraints": {"type": "boolean"}
+          },
+          "title": "Software Development"
+        }
+      ]
+    },
+    "custom_requirements": {
+      "type": "array",
+      "items": {"type": "string"},
+      "description": "Additional custom requirements not covered by schema"
+    }
+  },
+  "required": ["domain", "objective", "user_profile"],
+  "additionalProperties": false
+}

@@ -1,0 +1,55 @@
+{
+  "name": "unified-meta-prompt",
+  "version": "1.0.0",
+  "description": "Unified meta-prompt system for generating domain-specific prompts with MCP integration",
+  "type": "module",
+  "main": "meta-prompt-cli.js",
+  "bin": {
+    "prompt": "./meta-prompt-cli.js"
+  },
+  "scripts": {
+    "start": "node meta-prompt-cli.js",
+    "test": "node --test test/*.test.js",
+    "lint": "eslint *.js",
+    "validate-schema": "ajv validate -s meta-prompt-schema.json -d examples/*.json",
+    "build": "echo 'No build step required for Node.js v24.7.0'",
+    "generate": "node meta-prompt-cli.js",
+    "dev": "node --watch meta-prompt-cli.js"
+  },
+  "engines": {
+    "node": ">=24.7.0"
+  },
+  "keywords": [
+    "prompt-engineering",
+    "ai",
+    "mcp",
+    "claude-sonnet-4",
+    "meta-prompt",
+    "domain-specific",
+    "prompt-generation"
+  ],
+  "author": "AI Assistant",
+  "license": "MIT",
+  "dependencies": {
+    "ajv": "^8.12.0"
+  },
+  "devDependencies": {
+    "eslint": "^8.56.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "."
+  },
+  "files": [
+    "meta-prompt-cli.js",
+    "unified-meta-prompt.md",
+    "meta-prompt-schema.json",
+    "README.md",
+    "examples/"
+  ],
+  "config": {
+    "default_model": "claude-sonnet-4",
+    "runtime": "Node.js v24.7.0",
+    "mcp_enabled": true
+  }
+}

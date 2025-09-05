@@ -1,0 +1,69 @@
+{
+  "title": "Generated Prompt for AI AGENT_INSTRUCTIONS",
+  "context": "You are creating AI agent instructions. Available tools: 5 MCP servers.",
+  "objective": "create automated ai agent",
+  "instructions": [
+    "1. Analyze the provided context and requirements carefully",
+    "2. Structure your response according to the specified format",
+    "3. Include all required elements while respecting constraints",
+    "4. Define clear tool schemas and function signatures",
+    "5. Include comprehensive error handling and safety rails",
+    "6. Specify MCP server integration patterns",
+    "7. Maintain concise tone throughout"
+  ],
+  "constraints": {
+    "domain_specific": {},
+    "safety": [
+      "No harmful, biased, or inappropriate content",
+      "Respect privacy and PII handling requirements",
+      "Comply with platform and organizational policies"
+    ]
+  },
+  "output_format": {
+    "format": "Use clean Markdown formatting with headers and sections",
+    "verbosity": "Be brief and direct, include only essential information",
+    "structure": {
+      "required_sections": [
+        "context",
+        "instructions",
+        "constraints",
+        "quality_criteria"
+      ],
+      "optional_sections": [
+        "examples",
+        "tools_integration"
+      ]
+    }
+  },
+  "examples": "Include 1-2 relevant examples for ai_agent_instructions context",
+  "quality_criteria": {
+    "clarity": "Instructions are unambiguous and easy to follow",
+    "completeness": "All necessary elements are included",
+    "actionability": "Response can be immediately implemented",
+    "safety": "Complies with all safety and policy requirements",
+    "domain_appropriateness": "Content is suitable for the specified domain"
+  },
+  "tools_integration": {
+    "available_mcp_tools": [
+      "firecrawl_search",
+      "brave_web_search",
+      "logo_search",
+      "byterover-store-knowledge",
+      "sequentialthinking"
+    ],
+    "usage_hints": []
+  },
+  "safety_guidelines": [
+    "Content must be appropriate and non-harmful",
+    "Respect user privacy and data protection",
+    "Follow platform community guidelines",
+    "Avoid bias and ensure inclusive language"
+  ],
+  "metadata": {
+    "generated_at": "2025-09-05T07:30:03.749Z",
+    "model": "claude-sonnet-4",
+    "runtime": "Node.js v24.7.0",
+    "domain": "ai_agent_instructions",
+    "user_expertise": "expert"
+  }
+}

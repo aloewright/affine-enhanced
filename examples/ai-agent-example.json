@@ -1,0 +1,56 @@
+{
+  "domain": "ai_agent_instructions",
+  "objective": "Create an AI agent that helps developers debug Node.js applications by analyzing error logs, suggesting fixes, and providing code examples",
+  "constraints": {
+    "length": {
+      "words": 800
+    },
+    "safety": [
+      "No system-level access",
+      "Read-only file operations only",
+      "No credential access",
+      "Sandbox execution only"
+    ],
+    "format": "markdown",
+    "compliance": [
+      "GDPR data protection",
+      "Company security policies"
+    ]
+  },
+  "user_profile": {
+    "expertise": "expert",
+    "role": "developer",
+    "context": "team"
+  },
+  "preferences": {
+    "tone": "professional",
+    "verbosity": "comprehensive",
+    "examples": true,
+    "language": "en",
+    "citations": true
+  },
+  "environment": {
+    "tools": [
+      "firecrawl_search",
+      "brave_web_search", 
+      "byterover-store-knowledge",
+      "sequentialthinking"
+    ],
+    "runtime": "Node.js v24.7.0",
+    "model": "claude-sonnet-4",
+    "token_budget": 4000,
+    "latency_target": "standard"
+  },
+  "domain_specific": {
+    "tool_schemas": true,
+    "error_handling": true,
+    "safety_rails": true,
+    "mcp_integration": true
+  },
+  "custom_requirements": [
+    "Include step-by-step debugging workflow",
+    "Provide code pattern recognition",
+    "Support multiple Node.js versions",
+    "Include performance optimization suggestions"
+  ]
+}
