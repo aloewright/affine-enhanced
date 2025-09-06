@@ -28,14 +28,25 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup gopass
+        uses: gopasspw/gopass-action@v1
+        with:
+          gpg-private-key: ${{ secrets.GOPASS_GPG_KEY }}
+          gpg-passphrase: ${{ secrets.GOPASS_GPG_PASSPHRASE }}
+
+      - name: Get GCP credentials
+        id: gcp-creds
+        run: |
+          echo "::add-mask::$(gopass show gcloud/affine/ci-service-account)"
+          echo "gcp_credentials=$(gopass show gcloud/affine/ci-service-account)" >> "$GITHUB_OUTPUT"
+
       # Authenticate to Google Cloud using Workload Identity Federation
       - id: 'auth'
         name: 'Authenticate to Google Cloud'
         uses: google-github-actions/auth@v3
         with:
           project_id: ${{ env.PROJECT_ID }}
-          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
-          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+          credentials_json: ${{ steps.gcp-creds.outputs.gcp_credentials }}
 
       # Setup gcloud CLI
       - name: Set up Cloud SDK
