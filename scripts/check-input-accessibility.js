@@ -96,7 +96,7 @@ function scanFiles() {
 try {
   require.resolve('glob');
   scanFiles();
-} catch (_e) {
+} catch {
   console.error(
     'Error: glob package not found. Installing it might be needed.'
   );
