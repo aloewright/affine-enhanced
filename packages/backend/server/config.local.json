@@ -1,0 +1,22 @@
+{
+  "$schema": "../../../.docker/selfhost/schema.json",
+  "copilot": {
+    "enabled": true,
+    "providers": {
+      "openai": {
+        "apiKey": "",
+        "baseURL": "https://openrouter.ai/api/v1"
+      }
+    },
+    "scenarios": {
+      "override_enabled": true,
+      "scenarios": {
+        "chat": "anthropic/claude-3.7-sonnet",
+        "quick_text_generation": "xai/grok-2-latest",
+        "complex_text_generation": "google/gemini-1.5-pro-latest",
+        "coding": "deepseek/deepseek-coder",
+        "embedding": "openai/text-embedding-3-large"
+      }
+    }
+  }
+}
