@@ -1,23 +1,30 @@
 #!/usr/bin/env node
 const express = require('express');
-const path = require('path');
-const fs = require('fs');
-const https = require('https');
+const path = require('node:path');
+const fs = require('node:fs');
+const https = require('node:https');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
 // Load config
-const config = JSON.parse(fs.readFileSync('./packages/backend/server/config.local.json', 'utf8'));
+const config = JSON.parse(
+  fs.readFileSync('./packages/backend/server/config.local.json', 'utf8')
+);
 
 // Middleware
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'packages/frontend/apps/web/dist')));
+app.use(
+  express.static(path.join(__dirname, 'packages/frontend/apps/web/dist'))
+);
 
 // CORS
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+  res.header(
+    'Access-Control-Allow-Headers',
+    'Origin, X-Requested-With, Content-Type, Accept, Authorization'
+  );
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   if (req.method === 'OPTIONS') {
     return res.sendStatus(200);
@@ -27,21 +34,29 @@ app.use((req, res, next) => {
 
 // Health check
 app.get('/api/healthz', (req, res) => {
-  res.json({ status: 'healthy', service: 'affine-openrouter', timestamp: new Date().toISOString() });
+  res.json({
+    status: 'healthy',
+    service: 'affine-openrouter',
+    timestamp: new Date().toISOString(),
+  });
 });
 
 // OpenRouter API proxy
 app.post('/api/ai/chat', async (req, res) => {
-  const { model = 'anthropic/claude-3.7-sonnet', messages, ...options } = req.body;
-  
+  const {
+    model = 'anthropic/claude-3.7-sonnet',
+    messages,
+    ...options
+  } = req.body;
+
   const apiKey = process.env.OPENROUTER_API_KEY || 'sk-or-demo-key';
-  
+
   const data = JSON.stringify({
     model,
     messages,
     max_tokens: options.max_tokens || 1000,
     temperature: options.temperature || 0.7,
-    ...options
+    ...options,
   });
 
   const requestOptions = {
@@ -51,32 +66,34 @@ app.post('/api/ai/chat', async (req, res) => {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`,
       'Content-Length': data.length,
       'HTTP-Referer': 'https://affine-enhanced.localhost',
-      'X-Title': 'AFFiNE Enhanced'
-    }
+      'X-Title': 'AFFiNE Enhanced',
+    },
   };
 
-  const proxyReq = https.request(requestOptions, (proxyRes) => {
+  const proxyReq = https.request(requestOptions, proxyRes => {
     let responseData = '';
-    
-    proxyRes.on('data', (chunk) => {
+
+    proxyRes.on('data', chunk => {
       responseData += chunk;
     });
-    
+
     proxyRes.on('end', () => {
       try {
         const result = JSON.parse(responseData);
         res.json(result);
-      } catch (error) {
+      } catch {
         res.status(500).json({ error: 'Failed to parse OpenRouter response' });
       }
     });
   });
 
-  proxyReq.on('error', (error) => {
-    res.status(500).json({ error: `OpenRouter request failed: ${error.message}` });
+  proxyReq.on('error', error => {
+    res
+      .status(500)
+      .json({ error: `OpenRouter request failed: ${error.message}` });
   });
 
   proxyReq.write(data);
@@ -87,12 +104,24 @@ app.post('/api/ai/chat', async (req, res) => {
 app.get('/api/ai/models', (req, res) => {
   res.json({
     models: [
-      { id: 'anthropic/claude-3.7-sonnet', name: 'Claude 3.7 Sonnet', provider: 'Anthropic' },
+      {
+        id: 'anthropic/claude-3.7-sonnet',
+        name: 'Claude 3.7 Sonnet',
+        provider: 'Anthropic',
+      },
       { id: 'xai/grok-2-latest', name: 'Grok 2 Latest', provider: 'xAI' },
-      { id: 'google/gemini-1.5-pro-latest', name: 'Gemini 1.5 Pro', provider: 'Google' },
-      { id: 'deepseek/deepseek-coder', name: 'Deepseek Coder', provider: 'Deepseek' }
+      {
+        id: 'google/gemini-1.5-pro-latest',
+        name: 'Gemini 1.5 Pro',
+        provider: 'Google',
+      },
+      {
+        id: 'deepseek/deepseek-coder',
+        name: 'Deepseek Coder',
+        provider: 'Deepseek',
+      },
     ],
-    config: config.copilot?.scenarios || {}
+    config: config.copilot?.scenarios || {},
   });
 });
 
@@ -101,9 +130,11 @@ app.get('/api/config', (req, res) => {
   res.json({
     openrouter: {
       enabled: true,
-      models: Object.keys(config.copilot?.scenarios || {}).filter(k => k !== 'override_enabled'),
-      baseURL: 'https://openrouter.ai/api/v1'
-    }
+      models: Object.keys(config.copilot?.scenarios || {}).filter(
+        k => k !== 'override_enabled'
+      ),
+      baseURL: 'https://openrouter.ai/api/v1',
+    },
   });
 });
 
@@ -111,39 +142,42 @@ app.get('/api/config', (req, res) => {
 app.get('/api/ai/test', async (req, res) => {
   const models = [
     'anthropic/claude-3.7-sonnet',
-    'xai/grok-2-latest', 
+    'xai/grok-2-latest',
     'google/gemini-1.5-pro-latest',
-    'deepseek/deepseek-coder'
+    'deepseek/deepseek-coder',
   ];
-  
+
   const results = [];
-  
+
   for (const model of models) {
     try {
       // Mock test - in production would make actual API call
       results.push({
         model,
         status: 'ready',
-        message: `${model} is configured and ready`
+        message: `${model} is configured and ready`,
       });
     } catch (error) {
       results.push({
         model,
         status: 'error',
-        message: error.message
+        message: error.message,
       });
     }
   }
-  
-  res.json({ 
+
+  res.json({
     timestamp: new Date().toISOString(),
-    results 
+    results,
   });
 });
 
 // Frontend fallback
 app.get('*', (req, res) => {
-  const indexPath = path.join(__dirname, 'packages/frontend/apps/web/dist/index.html');
+  const indexPath = path.join(
+    __dirname,
+    'packages/frontend/apps/web/dist/index.html'
+  );
   if (fs.existsSync(indexPath)) {
     res.sendFile(indexPath);
   } else {

@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-const http = require('http');
-const fs = require('fs');
-const path = require('path');
-const https = require('https');
+const http = require('node:http');
+const fs = require('node:fs');
 
 const PORT = process.env.PORT || 8080;
 
 // Load config
-const config = JSON.parse(fs.readFileSync('./packages/backend/server/config.local.json', 'utf8'));
+const config = JSON.parse(
+  fs.readFileSync('./packages/backend/server/config.local.json', 'utf8')
+);
 
 // Create server
 const server = http.createServer((req, res) => {
@@ -25,47 +25,84 @@ const server = http.createServer((req, res) => {
   // Route handling
   if (req.url === '/api/healthz' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({ 
-      status: 'healthy', 
-      service: 'affine-openrouter', 
-      timestamp: new Date().toISOString() 
-    }));
-  } 
-  else if (req.url === '/api/ai/models' && req.method === 'GET') {
+    res.end(
+      JSON.stringify({
+        status: 'healthy',
+        service: 'affine-openrouter',
+        timestamp: new Date().toISOString(),
+      })
+    );
+  } else if (req.url === '/api/ai/models' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      models: [
-        { id: 'anthropic/claude-3.7-sonnet', name: 'Claude 3.7 Sonnet', provider: 'Anthropic' },
-        { id: 'xai/grok-2-latest', name: 'Grok 2 Latest', provider: 'xAI' },
-        { id: 'google/gemini-1.5-pro-latest', name: 'Gemini 1.5 Pro', provider: 'Google' },
-        { id: 'deepseek/deepseek-coder', name: 'Deepseek Coder', provider: 'Deepseek' }
-      ],
-      config: config.copilot?.scenarios || {}
-    }));
-  }
-  else if (req.url === '/api/config' && req.method === 'GET') {
+    res.end(
+      JSON.stringify({
+        models: [
+          {
+            id: 'anthropic/claude-3.7-sonnet',
+            name: 'Claude 3.7 Sonnet',
+            provider: 'Anthropic',
+          },
+          { id: 'xai/grok-2-latest', name: 'Grok 2 Latest', provider: 'xAI' },
+          {
+            id: 'google/gemini-1.5-pro-latest',
+            name: 'Gemini 1.5 Pro',
+            provider: 'Google',
+          },
+          {
+            id: 'deepseek/deepseek-coder',
+            name: 'Deepseek Coder',
+            provider: 'Deepseek',
+          },
+        ],
+        config: config.copilot?.scenarios || {},
+      })
+    );
+  } else if (req.url === '/api/config' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      openrouter: {
-        enabled: true,
-        models: ['copilot_claude', 'copilot_grok', 'copilot_gemini', 'copilot_coder'],
-        baseURL: 'https://openrouter.ai/api/v1'
-      }
-    }));
-  }
-  else if (req.url === '/api/ai/test' && req.method === 'GET') {
+    res.end(
+      JSON.stringify({
+        openrouter: {
+          enabled: true,
+          models: [
+            'copilot_claude',
+            'copilot_grok',
+            'copilot_gemini',
+            'copilot_coder',
+          ],
+          baseURL: 'https://openrouter.ai/api/v1',
+        },
+      })
+    );
+  } else if (req.url === '/api/ai/test' && req.method === 'GET') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
-    res.end(JSON.stringify({
-      timestamp: new Date().toISOString(),
-      results: [
-        { model: 'anthropic/claude-3.7-sonnet', status: 'ready', message: 'Claude 3.7 Sonnet is configured' },
-        { model: 'xai/grok-2-latest', status: 'ready', message: 'Grok 2 Latest is configured' },
-        { model: 'google/gemini-1.5-pro-latest', status: 'ready', message: 'Gemini 1.5 Pro is configured' },
-        { model: 'deepseek/deepseek-coder', status: 'ready', message: 'Deepseek Coder is configured' }
-      ]
-    }));
-  }
-  else if (req.url === '/' || req.url === '/index.html') {
+    res.end(
+      JSON.stringify({
+        timestamp: new Date().toISOString(),
+        results: [
+          {
+            model: 'anthropic/claude-3.7-sonnet',
+            status: 'ready',
+            message: 'Claude 3.7 Sonnet is configured',
+          },
+          {
+            model: 'xai/grok-2-latest',
+            status: 'ready',
+            message: 'Grok 2 Latest is configured',
+          },
+          {
+            model: 'google/gemini-1.5-pro-latest',
+            status: 'ready',
+            message: 'Gemini 1.5 Pro is configured',
+          },
+          {
+            model: 'deepseek/deepseek-coder',
+            status: 'ready',
+            message: 'Deepseek Coder is configured',
+          },
+        ],
+      })
+    );
+  } else if (req.url === '/' || req.url === '/index.html') {
     res.writeHead(200, { 'Content-Type': 'text/html' });
     res.end(`
       <!DOCTYPE html>
@@ -312,8 +349,7 @@ const server = http.createServer((req, res) => {
       </body>
       </html>
     `);
-  }
-  else {
+  } else {
     res.writeHead(404, { 'Content-Type': 'text/plain' });
     res.end('Not Found');
   }

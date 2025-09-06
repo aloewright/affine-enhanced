@@ -44,10 +44,10 @@ import { CopilotCronJobs } from './cron';
 import { PromptService } from './prompt';
 import { PromptMessage, StreamObject } from './providers';
 import { CopilotProviderFactory } from './providers/factory';
+import { AIProviderID } from './providers/types';
 import { ChatSessionService } from './session';
 import { CopilotStorage } from './storage';
 import { type ChatHistory, type ChatMessage, SubmittedMessage } from './types';
-import { AIProviderID } from './providers/types';
 
 export const COPILOT_LOCKER = 'copilot';
 
@@ -849,7 +849,7 @@ class CreateCopilotPromptInput {
 export class PromptsManagementResolver {
   constructor(
     private readonly cron: CopilotCronJobs,
-    private readonly promptService: PromptService
+    private readonly promptService: PromptService,
     private readonly providerFactory: CopilotProviderFactory
   ) {}
 
@@ -889,9 +889,11 @@ export class PromptsManagementResolver {
     description: 'List all available copilot models',
   })
   async listCopilotModels() {
-    const provider = await this.providerFactory.getProvider(AIProviderID.OpenRouter);
+    const provider = await this.providerFactory.getProvider(
+      AIProviderID.OpenRouter
+    );
     if (!provider) {
-        return [];
+      return [];
     }
     return provider.getModels();
   }

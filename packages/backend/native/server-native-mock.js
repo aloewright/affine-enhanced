@@ -1,7 +1,7 @@
 // Mock implementation for @affine/server-native
 // This is a temporary workaround to run the server without the native Rust module
 
-const crypto = require('crypto');
+const crypto = require('node:crypto');
 
 module.exports = {
   mergeUpdatesInApplyWay: function (...updates) {
@@ -9,7 +9,7 @@ module.exports = {
     return updates[0] || Buffer.alloc(0);
   },
 
-  verifyChallengeResponse: async function (response, bits, resource) {
+  verifyChallengeResponse: async function (_response, _bits, _resource) {
     // Mock implementation - always return true for development
     console.warn(
       'Using mock verifyChallengeResponse - not secure for production'
@@ -17,7 +17,7 @@ module.exports = {
     return true;
   },
 
-  mintChallengeResponse: async function (resource, bits) {
+  mintChallengeResponse: async function (_resource, _bits) {
     // Mock implementation - return a dummy challenge
     console.warn(
       'Using mock mintChallengeResponse - not secure for production'
@@ -25,25 +25,25 @@ module.exports = {
     return crypto.randomBytes(32).toString('hex');
   },
 
-  fromModelName: function (model) {
+  fromModelName: function (_model) {
     // Mock tokenizer
     return {
       encode: function (text) {
         // Simple approximation: ~4 characters per token
-        return new Array(Math.ceil(text.length / 4)).fill(0);
+        return Array.from({ length: Math.ceil(text.length / 4) }).fill(0);
       },
-      decode: function (tokens) {
+      decode: function (_tokens) {
         return 'mocked text';
       },
     };
   },
 
-  getMime: function (buffer) {
+  getMime: function (_buffer) {
     // Mock MIME type detection
     return 'application/octet-stream';
   },
 
-  parseDoc: function (buffer) {
+  parseDoc: function (_buffer) {
     // Mock document parser
     return {
       content: 'mocked content',

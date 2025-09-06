@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
+
 import { AIProvider, AIProviderID } from './provider';
-import { CopilotProviderConfig } from '../config';
+import { CopilotProviderConfig } from './types';
 
 @Injectable()
 export class OpenRouter extends AIProvider {
@@ -18,11 +19,12 @@ export class OpenRouter extends AIProvider {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch models from OpenRouter: ${res.statusText}`);
+      throw new Error(
+        `Failed to fetch models from OpenRouter: ${res.statusText}`
+      );
     }
 
     const { data } = await res.json();
     return data.map((model: any) => model.id);
   }
 }
-

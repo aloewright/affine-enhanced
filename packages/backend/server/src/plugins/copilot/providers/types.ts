@@ -1,3 +1,9 @@
+export interface CopilotProviderConfig {
+  openRouter: {
+    apiKey: string;
+  };
+}
+
 import { AiPromptRole } from '@prisma/client';
 import { z } from 'zod';
 

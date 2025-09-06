@@ -10,7 +10,7 @@ try {
         : process.arch === 'arm'
           ? require('./server-native.armv7.node')
           : require('./server-native.x64.node');
-  } catch (err) {
+  } catch {
     console.warn('Native module not found, using mock implementation');
     console.warn('This is not secure for production!');
     binding = require('./server-native-mock.js');
