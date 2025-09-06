@@ -13,6 +13,7 @@ import { GeminiGenerativeConfig, GeminiVertexConfig } from './providers/gemini';
 import { MorphConfig } from './providers/morph';
 import { OpenAIConfig } from './providers/openai';
 import { PerplexityConfig } from './providers/perplexity';
+import { OpenRouterConfig } from './providers/openrouter';
 import { VertexSchema } from './providers/types';
 declare global {
   interface AppConfigSchema {
@@ -35,6 +36,7 @@ declare global {
         anthropic: ConfigItem<AnthropicOfficialConfig>;
         anthropicVertex: ConfigItem<AnthropicVertexConfig>;
         morph: ConfigItem<MorphConfig>;
+        openRouter: ConfigItem<OpenRouterConfig>;
       };
     };
   }
@@ -106,6 +108,12 @@ defineModuleConfig('copilot', {
     desc: 'The config for the anthropic provider in Google Vertex AI.',
     default: {},
     schema: VertexSchema,
+  },
+  'providers.openRouter': {
+    desc: 'The config for the openrouter provider.',
+    default: {
+      apiKey: process.env.OPENROUTER_API_KEY || 'A5plzjtwj4q3gw80rtg0f6nue7atforygxzl5me41n9bllz7jvo',
+    },
   },
   'providers.morph': {
     desc: 'The config for the morph provider.',

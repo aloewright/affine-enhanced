@@ -21,7 +21,6 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
   NODE_ENV: production
   DEBUG: napi:*
 
@@ -44,12 +43,26 @@ jobs:
       - name: Run i18n codegen
         run: yarn affine @affine/i18n build
 
+      - name: Setup gopass
+        uses: gopasspw/gopass-action@v1
+        with:
+          gpg-private-key: ${{ secrets.GOPASS_GPG_KEY }}
+          gpg-passphrase: ${{ secrets.GOPASS_GPG_PASSPHRASE }}
+
+      - name: Get Snyk token
+        id: snyk-token
+        run: |
+          echo "::add-mask::$(gopass show security/snyk/token)"
+          echo "token=$(gopass show security/snyk/token)" >> "$GITHUB_OUTPUT"
+
       - name: Run Snyk test (frontend)
         uses: snyk/actions/node@v4
         with:
           command: test
           args: --severity-threshold=low --sarif-file-output=snyk-frontend.sarif
           file: ./packages/frontend/package.json
+        env:
+          SNYK_TOKEN: ${{ steps.snyk-token.outputs.token }}
 
       - name: Run Snyk test (backend)
         uses: snyk/actions/node@v4

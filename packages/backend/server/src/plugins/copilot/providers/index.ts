@@ -6,14 +6,15 @@ import { FalProvider } from './fal';
 import { GeminiGenerativeProvider, GeminiVertexProvider } from './gemini';
 import { MorphProvider } from './morph';
 import { OpenAIProvider } from './openai';
-import { PerplexityProvider } from './perplexity';
+import { OpenRouter } from './openrouter';
 
 export const CopilotProviders = [
   OpenAIProvider,
   FalProvider,
   GeminiGenerativeProvider,
   GeminiVertexProvider,
-  PerplexityProvider,
+  Perplexity,
+  OpenRouter,
   AnthropicOfficialProvider,
   AnthropicVertexProvider,
   MorphProvider,

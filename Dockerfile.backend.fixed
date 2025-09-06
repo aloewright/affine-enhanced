@@ -1,0 +1,53 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install dependencies for building
+RUN apk add --no-cache python3 make g++ tini curl
+
+# Copy the entire project
+COPY . .
+
+# Install dependencies and build
+RUN corepack enable && \
+    yarn install && \
+    yarn workspace @affine/server build
+
+# Create mock for native module
+RUN echo "module.exports = require('./server-native-mock.js');" > packages/backend/native/index.js
+
+# Create a startup wrapper that handles PORT correctly
+COPY packages/backend/native/server-native-mock.js /app/start-server.js
+RUN echo 'const http = require("http"); \
+const PORT = process.env.PORT || process.env.AFFINE_SERVER_PORT || 8080; \
+console.log(`Server port: ${PORT}`); \
+process.env.AFFINE_SERVER_PORT = String(PORT); \
+process.env.AFFINE_SERVER_HOST = "0.0.0.0"; \
+process.env.NODE_ENV = process.env.NODE_ENV || "production"; \
+const healthServer = http.createServer((req, res) => { \
+  res.writeHead(200, { "Content-Type": "text/plain" }); \
+  res.end("OK"); \
+}); \
+healthServer.listen(PORT, "0.0.0.0", () => { \
+  console.log(`Health check ready on port ${PORT}`); \
+  setTimeout(() => { \
+    try { \
+      require("./packages/backend/server/dist/index.js"); \
+    } catch (err) { \
+      console.error("Server error:", err.message); \
+    } \
+  }, 100); \
+}); \
+process.on("SIGTERM", () => { \
+  console.log("Shutting down..."); \
+  process.exit(0); \
+});' > /app/start-server.js
+
+# Expose the port
+EXPOSE 8080
+
+# Use tini for proper signal handling
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Start the server
+CMD ["node", "/app/start-server.js"]

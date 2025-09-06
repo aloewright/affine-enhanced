@@ -16,16 +16,17 @@ The `cloud-storage-upload.yml` workflow automatically uploads build artifacts to
 - Structures artifacts by commit hash and release tag
 
 ### Required Secrets
-Set these via `gopass` and GitHub Actions secrets:
+Secrets are managed via `gopass` with GitHub Actions GPG key access:
 
 ```bash
-# Generate JSON credentials for a service account with roles/storage.objectAdmin
-gopass show gcloud/affine/ci-service-account > gcp-creds.json
+# Store GCP service account credentials (with roles/storage.objectAdmin):
+gopass insert gcloud/affine/ci-service-account
+gopass insert gcloud/affine/project-id
+gopass insert gcloud/affine/artifacts-bucket
 
-# Store secrets in GitHub
-gh secret set GCP_CREDENTIALS < gcp-creds.json
-gh secret set GCS_BUCKET -b affine-ci-artifacts     # Bucket name only
-gh secret set GCP_PROJECT_ID -b your-gcp-project-id
+# Store GPG key for CI access to gopass store
+gh secret set GOPASS_GPG_KEY "$(cat ci-gpg.key)"
+gh secret set GOPASS_GPG_PASSPHRASE "your-passphrase"
 ```
 
 ### Artifact Structure
@@ -65,12 +66,14 @@ The `security-analysis-snyk.yml` workflow provides automated vulnerability scann
 
 ### Required Secrets
 ```bash
-# Store Snyk auth token
-gopass show security/snyk/token | gh secret set SNYK_TOKEN -b -
+# Store Snyk auth token in gopass
+gopass insert security/snyk/token
 
-# Optional: Set org-specific config (if using Snyk Teams/Enterprise)
-gh secret set SNYK_ORG -b your-org-id
+# Optional: Store org-specific config (if using Snyk Teams/Enterprise)
+gopass insert security/snyk/org-id
 ```
+
+Note: The CI workflow will automatically retrieve the token from gopass using the same GPG key setup as the Cloud Storage workflow.
 
 ### False Positive Management
 1. Create a `.snyk` policy file:

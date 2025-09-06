@@ -52,14 +52,28 @@ jobs:
       - name: Build Admin
         run: yarn affine @affine/admin build
 
+      - name: Setup gopass
+        uses: gopasspw/gopass-action@v1
+        with:
+          gpg-private-key: ${{ secrets.GOPASS_GPG_KEY }}
+          gpg-passphrase: ${{ secrets.GOPASS_GPG_PASSPHRASE }}
+
+      - name: Get GCP credentials
+        id: gcp-creds
+        run: |
+          echo "::add-mask::$(gopass show gcloud/affine/ci-service-account)"
+          echo "gcp_credentials=$(gopass show gcloud/affine/ci-service-account)" >> "$GITHUB_OUTPUT"
+          echo "gcp_project_id=$(gopass show gcloud/affine/project-id)" >> "$GITHUB_OUTPUT"
+          echo "gcs_bucket=$(gopass show gcloud/affine/artifacts-bucket)" >> "$GITHUB_OUTPUT"
+
       - name: Authenticate to Google Cloud
         id: auth
         uses: google-github-actions/auth@v2
         with:
-          credentials_json: ${{ secrets.GCP_CREDENTIALS }}
-          # If using WIF instead of JSON creds:
-          # workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
-          # service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+          credentials_json: ${{ steps.gcp-creds.outputs.gcp_credentials }}
+        env:
+          GCP_PROJECT_ID: ${{ steps.gcp-creds.outputs.gcp_project_id }}
+          GCS_BUCKET: ${{ steps.gcp-creds.outputs.gcs_bucket }}
 
       - name: Upload web artifacts (push)
         if: github.event_name == 'push'

@@ -1,0 +1,346 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "affine-tools"
+version = "0.22.4"
+description = "Python tooling and analysis utilities for AFFiNE project"
+readme = "README.md"
+license = {text = "MIT"}
+authors = [
+    {name = "toeverything", email = "dev@toeverything.io"}
+]
+maintainers = [
+    {name = "toeverything", email = "dev@toeverything.io"}
+]
+keywords = ["affine", "productivity", "workspace", "analysis", "tooling"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Office/Business",
+    "Topic :: Text Processing",
+]
+requires-python = ">=3.8"
+dependencies = [
+    "click>=8.0.0",
+    "pydantic>=2.0.0",
+    "requests>=2.25.0",
+    "rich>=13.0.0",
+    "typer>=0.9.0",
+]
+dynamic = ["dependencies"]
+
+[project.optional-dependencies]
+dev = [
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "isort>=5.12.0",
+    "mypy>=1.0.0",
+    "pre-commit>=3.0.0",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+]
+analysis = [
+    "pandas>=2.0.0",
+    "numpy>=1.24.0",
+    "matplotlib>=3.7.0",
+    "seaborn>=0.12.0",
+    "jupyter>=1.0.0",
+]
+docs = [
+    "mkdocs>=1.4.0",
+    "mkdocs-material>=9.0.0",
+    "mkdocstrings[python]>=0.20.0",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "pytest-asyncio>=0.21.0",
+    "httpx>=0.24.0",
+]
+
+[project.urls]
+Homepage = "https://affine.pro"
+Documentation = "https://docs.affine.pro"
+Repository = "https://github.com/toeverything/AFFiNE"
+"Bug Tracker" = "https://github.com/toeverything/AFFiNE/issues"
+Discord = "https://affine.pro/redirect/discord"
+Blog = "https://affine.pro/blog"
+
+[project.scripts]
+affine-tools = "affine_tools.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "python"}
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["python"]
+include = ["affine_tools*"]
+exclude = ["tests*"]
+
+[tool.setuptools.package-data]
+"affine_tools" = ["py.typed", "*.json", "*.yaml", "*.toml"]
+
+# Black configuration
+[tool.black]
+line-length = 88
+target-version = ['py38', 'py39', 'py310', 'py311', 'py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+  | node_modules
+)/
+'''
+
+# isort configuration
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+ensure_newline_before_comments = true
+skip_gitignore = true
+extend_skip_glob = ["node_modules/*", "build/*", "dist/*"]
+
+# MyPy configuration
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = ["tests.*"]
+disallow_untyped_defs = false
+
+# Pytest configuration
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=affine_tools",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+    "--cov-fail-under=80",
+]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning",
+]
+
+# Coverage configuration
+[tool.coverage.run]
+source = ["affine_tools"]
+omit = [
+    "*/tests/*",
+    "*/test_*.py",
+    "*/__pycache__/*",
+    "*/site-packages/*",
+    "*/venv/*",
+    "*/env/*",
+]
+branch = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+show_missing = true
+precision = 2
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+# Flake8 configuration (in case you prefer it over ruff)
+[tool.flake8]
+max-line-length = 88
+extend-ignore = ["E203", "W503", "E501"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+    "node_modules",
+    ".mypy_cache",
+    ".pytest_cache",
+]
+per-file-ignores = [
+    "__init__.py:F401",
+    "tests/*:D",
+]
+
+# Ruff configuration (modern alternative to flake8)
+[tool.ruff]
+target-version = "py38"
+line-length = 88
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "UP", # pyupgrade
+    "ARG", # flake8-unused-arguments
+    "SIM", # flake8-simplify
+    "PLR", # pylint refactor
+    "PLW", # pylint warning
+    "PLE", # pylint error
+]
+ignore = [
+    "E501",  # line too long, handled by black
+    "B008",  # do not perform function calls in argument defaults
+    "C901",  # too complex
+    "W191",  # indentation contains tabs
+]
+exclude = [
+    ".git",
+    "__pycache__",
+    "build",
+    "dist",
+    ".venv",
+    "venv",
+    "node_modules",
+    ".mypy_cache",
+    ".pytest_cache",
+]
+
+[tool.ruff.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/**/*" = ["PLR2004", "S101", "ARG"]
+
+[tool.ruff.mccabe]
+max-complexity = 10
+
+[tool.ruff.isort]
+known-first-party = ["affine_tools"]
+force-single-line = false
+
+# Codeflash configuration
+[tool.codeflash]
+# Required basic configuration
+test-framework = "pytest"
+package-manager = "yarn"
+module-root = "."
+tests-root = "tests"
+entrypoint = "packages/frontend/apps/electron/src/main/index.ts"
+
+# Project information
+project_name = "AFFiNE"
+project_description = "A privacy-focused, local-first, open-source alternative for Notion & Miro"
+project_type = "monorepo"
+
+# File patterns to include in analysis
+include_patterns = [
+    "**/*.ts",
+    "**/*.tsx",
+    "**/*.js",
+    "**/*.jsx",
+    "**/*.rs",
+    "**/*.py",
+    "**/*.md",
+    "**/*.json",
+    "**/*.toml",
+    "**/*.yaml",
+    "**/*.yml",
+]
+
+# File patterns to exclude from analysis
+exclude_patterns = [
+    "node_modules/**",
+    ".git/**",
+    "dist/**",
+    "build/**",
+    "target/**",
+    "coverage/**",
+    "htmlcov/**",
+    "**/*.min.js",
+    "**/*.bundle.js",
+    "**/*.d.ts",
+    "yarn.lock",
+    "package-lock.json",
+    "Cargo.lock",
+    ".yarn/**",
+    "**/__pycache__/**",
+    "**/.pytest_cache/**",
+    "**/.mypy_cache/**",
+    "tests/fixtures/**",
+    "**/*.spec.ts",
+    "**/*.test.ts",
+]
+
+# Important directories for analysis priority
+priority_dirs = [
+    "packages/frontend",
+    "packages/backend",
+    "blocksuite",
+    "packages/common",
+]
+
+# Technology stack
+languages = ["typescript", "javascript", "rust", "python"]
+frameworks = ["react", "electron", "vite", "tauri"]
+
+# Analysis settings
+max_tokens = 100000
+context_window = 50000
+code_analysis_depth = "detailed"
+include_tests = true
+include_docs = true
+verbose = true
