@@ -1,0 +1,92 @@
+name: Security Analysis (Snyk)
+
+on:
+  push:
+    branches:
+      - main
+      - beta
+      - stable
+      - v[0-9]+.[0-9]+.x
+  pull_request:
+    branches:
+      - '**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+  NODE_ENV: production
+  DEBUG: napi:*
+
+jobs:
+  snyk:
+    name: Snyk Security Scan
+    runs-on: ubuntu-latest
+    env:
+      NODE_OPTIONS: --max-old-space-size=14384
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: ./.github/actions/setup-node
+        with:
+          electron-install: false
+          full-cache: true
+
+      - name: Run i18n codegen
+        run: yarn affine @affine/i18n build
+
+      - name: Run Snyk test (frontend)
+        uses: snyk/actions/node@v4
+        with:
+          command: test
+          args: --severity-threshold=low --sarif-file-output=snyk-frontend.sarif
+          file: ./packages/frontend/package.json
+
+      - name: Run Snyk test (backend)
+        uses: snyk/actions/node@v4
+        with:
+          command: test
+          args: --severity-threshold=low --sarif-file-output=snyk-backend.sarif
+          file: ./packages/backend/package.json
+
+      - name: Run Snyk test (common)
+        uses: snyk/actions/node@v4
+        with:
+          command: test
+          args: --severity-threshold=low --sarif-file-output=snyk-common.sarif
+          file: ./packages/common/package.json
+
+      - name: Upload SARIF to GitHub Code Scanning
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: snyk-*.sarif
+
+      - name: Snyk monitor (main branch)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: snyk/actions/node@v4
+        with:
+          command: monitor
+          args: --workspace-path=packages/frontend
+
+      - name: Snyk monitor (main branch)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: snyk/actions/node@v4
+        with:
+          command: monitor
+          args: --workspace-path=packages/backend
+
+      - name: Snyk monitor (main branch)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: snyk/actions/node@v4
+        with:
+          command: monitor
+          args: --workspace-path=packages/common
