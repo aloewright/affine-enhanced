@@ -28,11 +28,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install gopass
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gopass
+
       - name: Setup gopass
-        uses: gopasspw/gopass-action@v1
-        with:
-          gpg-private-key: ${{ secrets.GOPASS_GPG_KEY }}
-          gpg-passphrase: ${{ secrets.GOPASS_GPG_PASSPHRASE }}
+        run: |
+          echo "${{ secrets.GOPASS_GPG_KEY }}" | gpg --import
+          gopass init --crypto gpg --storage fs ${{ secrets.GOPASS_STORE_DIR }} ${{ secrets.GOPASS_GPG_ID }}
+          gopass sync
 
       - name: Export GCP credentials
         run: gopass show gcloud/affine/ci-service-account > ${{ runner.temp }}/gcp-creds.json
