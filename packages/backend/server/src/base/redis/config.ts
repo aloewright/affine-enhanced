@@ -27,23 +27,23 @@ defineModuleConfig('redis', {
   },
   host: {
     desc: 'The host of the redis server.',
-    default: 'localhost',
+    default: 'redis-13561.c331.us-west1-1.gce.redns.redis-cloud.com',
     env: ['REDIS_SERVER_HOST', 'string'],
   },
   port: {
     desc: 'The port of the redis server.',
-    default: 6379,
+    default: 13561,
     env: ['REDIS_SERVER_PORT', 'integer'],
     shape: z.number().positive(),
   },
   username: {
     desc: 'The username of the redis server.',
-    default: '',
+    default: 'default',
     env: ['REDIS_SERVER_USERNAME', 'string'],
   },
   password: {
     desc: 'The password of the redis server.',
-    default: '',
+    default: 'shuH75vtdkfFdlKg5bAa2VxQqmdR4LSZ',
     env: ['REDIS_SERVER_PASSWORD', 'string'],
   },
   ioredis: {

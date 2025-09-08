@@ -1,0 +1,136 @@
+name: Cloud Storage Upload
+
+on:
+  push:
+    branches:
+      - main
+      - beta
+      - stable
+      - v[0-9]+.[0-9]+.x
+  release:
+    types:
+      - published
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  GCP_PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GCS_BUCKET: ${{ secrets.GCS_BUCKET }}
+  BUILD_TYPE: canary
+  NODE_ENV: production
+
+jobs:
+  build-and-upload:
+    name: Build & Upload Artifacts to GCS
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: ./.github/actions/setup-node
+        with:
+          electron-install: false
+          full-cache: true
+
+      - name: Build Core
+        run: yarn affine @affine/web build
+
+      - name: Build Mobile
+        run: yarn affine @affine/mobile build
+
+      - name: Build Admin
+        run: yarn affine @affine/admin build
+
+      - name: Setup gopass
+        uses: gopasspw/gopass-action@v1
+        with:
+          gpg-private-key: ${{ secrets.GOPASS_GPG_KEY }}
+          gpg-passphrase: ${{ secrets.GOPASS_GPG_PASSPHRASE }}
+
+      - name: Get GCP credentials
+        id: gcp-creds
+        run: |
+          echo "::add-mask::$(gopass show gcloud/affine/ci-service-account)"
+          echo "gcp_credentials=$(gopass show gcloud/affine/ci-service-account)" >> "$GITHUB_OUTPUT"
+          echo "gcp_project_id=$(gopass show gcloud/affine/project-id)" >> "$GITHUB_OUTPUT"
+          echo "gcs_bucket=$(gopass show gcloud/affine/artifacts-bucket)" >> "$GITHUB_OUTPUT"
+
+      - name: Authenticate to Google Cloud
+        id: auth
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ steps.gcp-creds.outputs.gcp_credentials }}
+        env:
+          GCP_PROJECT_ID: ${{ steps.gcp-creds.outputs.gcp_project_id }}
+          GCS_BUCKET: ${{ steps.gcp-creds.outputs.gcs_bucket }}
+
+      - name: Upload web artifacts (push)
+        if: github.event_name == 'push'
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          path: ./packages/frontend/apps/web/dist
+          destination: ${{ env.GCS_BUCKET }}/builds/${{ github.sha }}/web
+          parent: false
+          gzip: true
+          cacheControl: public, max-age=3600, immutable
+
+      - name: Upload mobile artifacts (push)
+        if: github.event_name == 'push'
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          path: ./packages/frontend/apps/mobile/dist
+          destination: ${{ env.GCS_BUCKET }}/builds/${{ github.sha }}/mobile
+          parent: false
+          gzip: true
+          cacheControl: public, max-age=3600, immutable
+
+      - name: Upload admin artifacts (push)
+        if: github.event_name == 'push'
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          path: ./packages/frontend/admin/dist
+          destination: ${{ env.GCS_BUCKET }}/builds/${{ github.sha }}/admin
+          parent: false
+          gzip: true
+          cacheControl: public, max-age=3600, immutable
+
+      - name: Upload web artifacts (release)
+        if: github.event_name == 'release'
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          path: ./packages/frontend/apps/web/dist
+          destination: ${{ env.GCS_BUCKET }}/releases/${{ github.event.release.tag_name }}/web
+          parent: false
+          gzip: true
+          cacheControl: public, max-age=31536000, immutable
+
+      - name: Upload mobile artifacts (release)
+        if: github.event_name == 'release'
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          path: ./packages/frontend/apps/mobile/dist
+          destination: ${{ env.GCS_BUCKET }}/releases/${{ github.event.release.tag_name }}/mobile
+          parent: false
+          gzip: true
+          cacheControl: public, max-age=31536000, immutable
+
+      - name: Upload admin artifacts (release)
+        if: github.event_name == 'release'
+        uses: google-github-actions/upload-cloud-storage@v2
+        with:
+          path: ./packages/frontend/admin/dist
+          destination: ${{ env.GCS_BUCKET }}/releases/${{ github.event.release.tag_name }}/admin
+          parent: false
+          gzip: true
+          cacheControl: public, max-age=31536000, immutable

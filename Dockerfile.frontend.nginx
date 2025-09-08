@@ -1,0 +1,40 @@
+FROM node:20-slim AS builder
+
+WORKDIR /app
+
+# Install dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    make \
+    g++ \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy package files
+COPY package.json yarn.lock ./
+COPY packages/frontend/ packages/frontend/
+COPY packages/common/ packages/common/
+
+# Install dependencies
+RUN yarn install --frozen-lockfile --network-timeout 300000
+
+# Copy source code
+COPY . .
+
+# Build frontend
+RUN yarn workspace @affine/web build
+
+# Production stage
+FROM nginx:alpine
+
+# Copy built assets
+COPY --from=builder /app/packages/frontend/apps/web/dist /usr/share/nginx/html
+
+# Copy NGINX configuration with buffer fixes
+COPY .github/deployment/front/affine.nginx.conf /etc/nginx/nginx.conf
+
+# Expose port
+EXPOSE 80
+
+# Start NGINX
+CMD ["nginx", "-g", "daemon off;"]

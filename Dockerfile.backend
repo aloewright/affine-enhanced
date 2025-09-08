@@ -1,0 +1,32 @@
+# Build stage - Using pre-built dist
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Install runtime dependencies
+RUN apk add --no-cache tini
+
+# Copy pre-built application
+COPY packages/backend/server/dist ./dist
+COPY packages/backend/server/package.json ./
+COPY packages/backend/server/node_modules ./node_modules
+
+# Create a simple mock for the native module
+RUN echo "module.exports = require('./server-native-mock.js');" > ./native/index.js
+
+# Copy the mock implementation
+COPY packages/backend/native/server-native-mock.js ./native/server-native-mock.js
+
+# Set environment variables
+ENV NODE_ENV=production
+ENV AFFINE_SERVER_PORT=8080
+ENV AFFINE_SERVER_HOST=0.0.0.0
+
+# Expose port
+EXPOSE 8080
+
+# Use tini to handle signals properly
+ENTRYPOINT ["/sbin/tini", "--"]
+
+# Start the server
+CMD ["node", "dist/index.js"]

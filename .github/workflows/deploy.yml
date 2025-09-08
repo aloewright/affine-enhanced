@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 2 * * 0' # Every Sunday at 2 AM UTC
+  workflow_dispatch: # Allow manual trigger
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
@@ -44,7 +47,7 @@ jobs:
     if: github.ref == 'refs/heads/main'
     needs: test
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
       id-token: write
@@ -92,8 +95,8 @@ jobs:
             --service-account=affine-service@$PROJECT_ID.iam.gserviceaccount.com \
             --vpc-connector=affine-connector \
             --vpc-egress=all-traffic \
-            --set-env-vars="NODE_ENV=production,PORT=3010" \
-            --set-secrets="NEXTAUTH_SECRET=nextauth-secret:latest,AFFINE_JWT_SECRET=jwt-secret:latest"
+            --set-env-vars="NODE_ENV=production,PORT=3010,OPENROUTER_ENABLED=true" \
+            --set-secrets="NEXTAUTH_SECRET=nextauth-secret:latest,AFFINE_JWT_SECRET=jwt-secret:latest,OPENROUTER_API_KEY=openrouter-api-key:latest"
 
       - name: Get service URL
         run: |
@@ -107,16 +110,20 @@ jobs:
         run: |
           # Wait a moment for service to be ready
           sleep 30
-          
+
           # Test health endpoint
           curl -f "$SERVICE_URL/api/healthcheck" || exit 1
           echo "Health check passed!"
+
+          # Test OpenRouter models endpoint
+          curl -f "$SERVICE_URL/api/ai/models" || exit 1
+          echo "OpenRouter models endpoint check passed!"
 
   # Infrastructure deployment (manual trigger or changes to terraform files)
   infrastructure:
     if: github.ref == 'refs/heads/main' && (contains(github.event.head_commit.message, '[infrastructure]') || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
       id-token: write
@@ -175,7 +182,7 @@ jobs:
   cleanup:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
-    
+
     permissions:
       contents: read
       id-token: write
@@ -206,8 +213,3 @@ jobs:
                 gcloud artifacts docker images delete "$REGISTRY/$PROJECT_ID/$REPOSITORY/$IMAGE@$digest" --quiet
               fi
             done
-
-# Schedule cleanup to run weekly
-on:
-  schedule:
-    - cron: '0 2 * * 0'  # Every Sunday at 2 AM UTC

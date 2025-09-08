@@ -1,0 +1,198 @@
+name: Deploy to Google Cloud Platform
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:  # Allow manual trigger
+
+env:
+  PROJECT_ID: gen-lang-client-0050235412
+  REGION: us-central1
+  SERVICE_NAME: affine-openrouter
+  GAR_LOCATION: us-central1
+  REPOSITORY: affine-docker
+  IMAGE: affine-openrouter
+
+jobs:
+  setup-build-deploy:
+    name: Setup, Build, and Deploy
+    runs-on: ubuntu-latest
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install gopass
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gopass
+
+      - name: Setup gopass
+        run: |
+          echo "${{ secrets.GOPASS_GPG_KEY }}" | gpg --import
+          gopass init --crypto gpg --storage fs ${{ secrets.GOPASS_STORE_DIR }} ${{ secrets.GOPASS_GPG_ID }}
+          gopass sync
+
+      - name: Export GCP credentials
+        run: gopass show gcloud/affine/ci-service-account > ${{ runner.temp }}/gcp-creds.json
+
+      # Authenticate to Google Cloud using the exported credentials file
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          credentials_json_path: ${{ runner.temp }}/gcp-creds.json
+
+      # Setup gcloud CLI
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v3
+        with:
+          version: '>= 460.0.0'
+          project_id: ${{ env.PROJECT_ID }}
+
+      # Configure Docker to use gcloud as a credential helper for authentication
+      - name: Configure Docker
+        run: |-
+          gcloud auth configure-docker ${{ env.GAR_LOCATION }}-docker.pkg.dev
+
+      # Build the Docker container
+      - name: Build Docker Image
+        run: |-
+          docker build \
+            --tag "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ github.sha }}" \
+            --tag "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:latest" \
+            --file Dockerfile.cloudrun \
+            --platform linux/amd64 \
+            .
+
+      # Push the Docker image to Google Artifact Registry
+      - name: Push Docker Image
+        run: |-
+          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ github.sha }}"
+          docker push "${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:latest"
+
+      # Deploy to Cloud Run using the official action
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          service: ${{ env.SERVICE_NAME }}
+          region: ${{ env.REGION }}
+          image: ${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ github.sha }}
+          env_vars: |
+            NODE_ENV=production
+            OPENROUTER_ENABLED=true
+          secrets: |
+            OPENROUTER_API_KEY=openrouter-api-key:latest
+          flags: |
+            --allow-unauthenticated
+            --memory=1Gi
+            --cpu=1
+            --timeout=300
+            --max-instances=5
+            --min-instances=0
+            --port=8080
+
+      # Test the deployment
+      - name: Test Deployment
+        run: |-
+          echo "Testing deployment at: ${{ steps.deploy.outputs.url }}"
+          
+          # Health check
+          curl -f "${{ steps.deploy.outputs.url }}/api/healthz" || exit 1
+          echo "✅ Health check passed!"
+          
+          # Test OpenRouter models endpoint
+          curl -f "${{ steps.deploy.outputs.url }}/api/ai/models" || exit 1
+          echo "✅ OpenRouter models endpoint working!"
+
+      # Output the service URL
+      - name: Show Service URL
+        run: echo "🚀 Service deployed at ${{ steps.deploy.outputs.url }}"
+
+  # Deploy Cloud Functions (if needed)
+  deploy-functions:
+    name: Deploy Cloud Functions
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    needs: setup-build-deploy
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      # Example Cloud Function deployment (optional)
+      - name: Deploy OpenRouter Handler Function
+        if: false  # Enable when needed
+        uses: google-github-actions/deploy-cloud-functions@v4
+        with:
+          name: openrouter-handler
+          runtime: nodejs22
+          entry_point: handleOpenRouterRequest
+          source_dir: ./functions
+          region: ${{ env.REGION }}
+          env_vars: |
+            OPENROUTER_ENABLED=true
+          secrets: |
+            OPENROUTER_API_KEY=openrouter-api-key:latest
+
+  # Create a Cloud Deploy release (for advanced deployments)
+  create-release:
+    name: Create Cloud Deploy Release
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && contains(github.event.head_commit.message, '[release]')
+    needs: setup-build-deploy
+    
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - id: 'auth'
+        name: 'Authenticate to Google Cloud'
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ env.PROJECT_ID }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
+
+      - name: Create Cloud Deploy Release
+        if: false  # Enable when Cloud Deploy pipeline is configured
+        uses: google-github-actions/create-cloud-deploy-release@v2
+        with:
+          name: 'affine-openrouter-${{ github.sha }}'
+          description: 'OpenRouter Integration Release'
+          delivery_pipeline: 'affine-pipeline'
+          region: ${{ env.REGION }}
+          images: |
+            affine-openrouter=${{ env.GAR_LOCATION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}:${{ github.sha }}
+          source: '.'
+          annotations: |
+            commit=${{ github.sha }}
+            branch=${{ github.ref_name }}
+            deployed-by=github-actions
+          labels: |
+            environment=production
+            service=openrouter

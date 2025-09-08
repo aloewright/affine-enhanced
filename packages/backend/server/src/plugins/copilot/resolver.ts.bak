@@ -44,7 +44,6 @@ import { CopilotCronJobs } from './cron';
 import { PromptService } from './prompt';
 import { PromptMessage, StreamObject } from './providers';
 import { CopilotProviderFactory } from './providers/factory';
-import { AIProviderID } from './providers/types';
 import { ChatSessionService } from './session';
 import { CopilotStorage } from './storage';
 import { type ChatHistory, type ChatMessage, SubmittedMessage } from './types';
@@ -780,7 +779,7 @@ export class CopilotResolver {
         [
           {
             role: 'user',
-            content: `<instruction>${op}</instruction>\\n<code>${markdown}</code>\\n<update>${updates}</update>`,
+            content: `<instruction>${op}</instruction>\n<code>${markdown}</code>\n<update>${updates}</update>`,
           },
         ],
         { reasoning: false }
@@ -849,8 +848,7 @@ class CreateCopilotPromptInput {
 export class PromptsManagementResolver {
   constructor(
     private readonly cron: CopilotCronJobs,
-    private readonly promptService: PromptService,
-    private readonly providerFactory: CopilotProviderFactory
+    private readonly promptService: PromptService
   ) {}
 
   @Mutation(() => Boolean, {
@@ -883,19 +881,6 @@ export class PromptsManagementResolver {
         !p.name.startsWith('chat:') &&
         !p.name.startsWith('action:')
     );
-  }
-
-  @Query(() => [String], {
-    description: 'List all available copilot models',
-  })
-  async listCopilotModels() {
-    const provider = await this.providerFactory.getProvider(
-      AIProviderID.OpenRouter
-    );
-    if (!provider) {
-      return [];
-    }
-    return provider.getModels();
   }
 
   @Mutation(() => CopilotPromptType, {
